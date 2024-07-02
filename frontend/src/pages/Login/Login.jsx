@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { getAuth, GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import app from '../../firebase/firebase.init';
 import Input from '@mui/joy/Input';
 import { Link as RouterLink } from 'react-router-dom';
 import Button from '@mui/joy/Button';
@@ -16,7 +18,6 @@ const Login = () => {
     const [login,setLogin] = useState(true);
     const [email,setEmail] = useState('');
     const [password,setPassword] = useState('');
-    const [mobileNo,setMobileNo] = useState('');
     axios.defaults.baseURL = 'http://localhost:5000';
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -27,7 +28,13 @@ const Login = () => {
         console.log(formData);
         axios.post('/login',formData).then((res) => {
             if(res.status === 200){
-                window.location.href = "/home";
+                const auth = getAuth(app);
+                signInWithEmailAndPassword(auth,email,password).then((user) => {
+                    if(user){
+                        console.log(user);
+                        window.location.href = "/home";
+                    }
+                });
             }else{
                 alert("Invalid Credentials");
             }
@@ -37,6 +44,29 @@ const Login = () => {
     const toggleRegister = () => {
         setLogin(!login);
     }
+
+    const handleGoogleLogin = () => {
+        const provider = new GoogleAuthProvider();
+        const auth = getAuth(app);
+        signInWithPopup(auth, provider).then((result) => {
+            const user = result.user;
+            const user_data = {
+                name: user.displayName,
+                email: user.email
+            };
+            axios.get('/google-login',{
+                params: user_data
+            }).then((res) => {
+                if(res.status === 200){
+                    alert(res.data);
+                    window.location.href = "/home";
+                }
+            })
+        }).catch((err) => {
+            console.error(err);
+        })
+    }
+
 
     return (
     <div className='login-container'>
@@ -57,7 +87,7 @@ const Login = () => {
                         <Divider orientation='horizontal'>OR</Divider>
                     </div>
                     <div className="google-button">
-                        <Button startDecorator={<GoogleIcon />}>Sign In With Google</Button>
+                        <Button startDecorator={<GoogleIcon />} onClick={handleGoogleLogin} >Sign In With Google</Button>
                     </div>
                 </>
             ) : (
